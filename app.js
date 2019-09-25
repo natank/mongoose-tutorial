@@ -1,4 +1,5 @@
-var mongoose = require('mongoose')
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
 mongoose.connect('mongodb://nathank:windows10@ds359077.mlab.com:59077/tutorial-mng')
 
 var db = mongoose.connection;
@@ -7,24 +8,35 @@ db.once('open', function () {
   console.log("wer'e connected");
 });
 
-var kittySchema = new mongoose.Schema({
-  name: String
+///////////////////////////////////////////////
+
+var blogSchema = new Schema({
+  title: String,
+  author: String,
+  body: String,
+  comments: [{
+    body: String,
+    date: Date
+  }],
+  date: {
+    type: Date,
+    default: Date.now
+  },
+  hidden: Boolean,
+  meta: {
+    votes: Number,
+    favs: Number
+  }
 })
 
-kittySchema.methods.speak = function () {
-  var greeting = this.name ? "Meow name is " + this.name : "I don't have a name;"
-  console.log(greeting)
+var Blog = mongoose.model('Blog', blogSchema);
+
+var animalSchema = new Schema({
+  name: String,
+  type: String
+})
+animalSchema.methods.findSimilarTypes = function (cb) {
+  return this.model('Animal').find({
+    type: this.type
+  }, cb)
 }
-
-var Kitten = mongoose.model('Kitten', kittySchema);
-
-var fluffy = new Kitten({
-  name: 'fluffy'
-});
-fluffy.speak();
-
-fluffy.save()
-  .then(function (fluffy) {
-    fluffy.speak();
-  })
-  .catch(err => console.error(err))
