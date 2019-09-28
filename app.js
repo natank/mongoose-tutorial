@@ -9,62 +9,64 @@ db.once('open', function() {
   console.log("wer'e connected");
 });
 
-//validationIntro();
-async function validationIntro() {
-  var schema = new Schema({
-    name: {
-      type: String,
-      required: true
-    }
+populateIntro();
+
+async function populateIntro() {
+  console.log('----Populate Intro -----\n');
+  // Create Schema
+  const personSchema = Schema({
+    _id: Schema.Types.ObjectId,
+    name: String,
+    age: Number,
+    stories: [{ type: Schema.Types.ObjectId, ref: 'Story' }]
   });
-  var Cat = db.model('Cat', schema);
-  var cat = new Cat();
+
+  const storySchema = Schema({
+    authors: [{ type: Schema.Types.ObjectId, ref: 'Person' }],
+    title: String,
+    fans: [{ type: Schema.Types.ObjectId, ref: 'Person' }]
+  });
+
+  // Create Models
+  const Story = mongoose.model('Story', storySchema);
+  const Person = mongoose.model('Person', personSchema);
+
+  //Create Documents
+  const author = new Person({
+    _id: new mongoose.Types.ObjectId(),
+    name: 'Ian Fleming',
+    age: 50
+  });
+
+  const fan1 = new Person({
+    _id: new mongoose.Types.ObjectId(),
+    name: 'Carlos Vives',
+    age: 58
+  });
+
+  const fan2 = new Person({
+    _id: new mongoose.Types.ObjectId(),
+    name: 'Gloria Esteban',
+    age: 63
+  });
+
   try {
-    let result = await cat.save();
+    await author.save();
+    await fan1.save();
+    await fan2.save();
+    const story1 = new Story({
+      title: 'Casino Royale',
+      authors: [author._id],
+      fans: [fan1._id, fan2._id]
+    });
+    await story1.save();
+
+    let foundStory = await Story.findOne({ title: 'Casino Royale' })
+      .populate('authors', 'name age')
+      .populate('fans', 'name age');
+    console.log(`The author is ${foundStory.authors}`);
+    console.log(`The fans are: ${foundStory.fans}`);
   } catch (error) {
-    //error = cat.validateSync();
     console.log(error);
   }
-}
-
-buildInValidators();
-async function buildInValidators() {
-  var breakfastSchema = new Schema({
-    eggs: {
-      type: Number,
-      min: [6, 'Too few eggs'],
-      max: 12
-    },
-    bacon: {
-      type: Number,
-      required: [true, 'Why no bacon?']
-    },
-    drink: {
-      type: String,
-      enum: ['Coffee', 'Tea'],
-      required: function() {
-        return this.bacon > 3;
-      }
-    }
-  });
-
-  var Breakfast = db.model('Breakfast', breakfastSchema);
-
-  var badBreakfast = new Breakfast({
-    eggs: 2,
-    bacon: 0,
-    drink: 'Milk'
-  });
-  var error = badBreakfast.validateSync();
-  console.log(`badBreakfast error #1: ${error}`);
-
-  badBreakfast.bacon = 5;
-  badBreakfast.drink = null;
-
-  error = badBreakfast.validateSync();
-  console.log(`badBreakfast error #2: ${error}`);
-
-  badBreakfast.bacon = null;
-  error = badBreakfast.validateSync();
-  console.log(`badBreakfast error #3: ${error}`);
 }
