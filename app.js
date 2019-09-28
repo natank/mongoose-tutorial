@@ -1,44 +1,70 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 //mongoose.connect('mongodb://localhost:27017/tutorial-mongs')
-mongoose.connect('mongodb://nathank:windows10@ds359077.mlab.com:59077/tutorial-mng')
+mongoose.connect('mongodb://nathank:windows10@ds359077.mlab.com:59077/tutorial-mng');
 
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function () {
+db.once('open', function() {
   console.log("wer'e connected");
 });
 
+//validationIntro();
+async function validationIntro() {
+  var schema = new Schema({
+    name: {
+      type: String,
+      required: true
+    }
+  });
+  var Cat = db.model('Cat', schema);
+  var cat = new Cat();
+  try {
+    let result = await cat.save();
+  } catch (error) {
+    //error = cat.validateSync();
+    console.log(error);
+  }
+}
 
-(function constructingDocs() {
-  var nameSchema = new Schema({
-    first: "String",
-    last: "String"
-  })
+buildInValidators();
+async function buildInValidators() {
+  var breakfastSchema = new Schema({
+    eggs: {
+      type: Number,
+      min: [6, 'Too few eggs'],
+      max: 12
+    },
+    bacon: {
+      type: Number,
+      required: [true, 'Why no bacon?']
+    },
+    drink: {
+      type: String,
+      enum: ['Coffee', 'Tea'],
+      required: function() {
+        return this.bacon > 3;
+      }
+    }
+  });
 
+  var Breakfast = db.model('Breakfast', breakfastSchema);
 
+  var badBreakfast = new Breakfast({
+    eggs: 2,
+    bacon: 0,
+    drink: 'Milk'
+  });
+  var error = badBreakfast.validateSync();
+  console.log(`badBreakfast error #1: ${error}`);
 
-  var yourSchema = new Schema({
-    name: nameSchema,
-    occupation: "String"
-  })
+  badBreakfast.bacon = 5;
+  badBreakfast.drink = null;
 
-  var Person = mongoose.model('Person', yourSchema)
+  error = badBreakfast.validateSync();
+  console.log(`badBreakfast error #2: ${error}`);
 
-  Person.create({
-      name: {
-        first: "Carlos",
-        last: "Vives"
-      },
-      occupation: "Singer"
-    })
-    .then((doc) => {
-
-      Person.findOne({
-          'name.first': 'Carlos'
-        })
-        .select('name.first occupation')
-        .then(person => console.log(`${person.name.first} is a ${person.occupation} `))
-        .catch(err => console.log(err))
-    })
-})()
+  badBreakfast.bacon = null;
+  error = badBreakfast.validateSync();
+  console.log(`badBreakfast error #3: ${error}`);
+}
